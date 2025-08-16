@@ -1,0 +1,36 @@
+name: 📚 Deploy Documentation
+
+on:
+  push:
+    branches: [ main ]
+    paths: 
+      - 'docs/**'
+      - 'README.md'
+
+jobs:
+  deploy-docs:
+    runs-on: ubuntu-24.04
+    permissions:
+      pages: write
+      id-token: write
+      
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+        
+      - name: Build documentation
+        run: |
+          mkdir -p _site
+          cp README.md _site/index.md
+          cp -r docs/ _site/
+          
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: '_site'
+          
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

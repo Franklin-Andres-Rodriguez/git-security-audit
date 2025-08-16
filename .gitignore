@@ -1,0 +1,30 @@
+# Security audit outputs
+security-audit/
+*.audit
+*.scan
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+*.log
+npm-debug.log*
+
+# Temporary files
+*.tmp
+*.temp
+.temp/
+
+# Node modules (si usas tools de JS)
+node_modules/
+
+# Python cache (si usas tools de Python)
+__pycache__/
+*.pyc

@@ -1,0 +1,56 @@
+# .github/workflows/release.yml
+name: 📦 Release Management
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  create-release:
+    name: Create Release
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+      packages: write
+    
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          
+      - name: Generate changelog
+        id: changelog
+        run: |
+          # Generate changelog since last tag
+          LAST_TAG=$(git describe --tags --abbrev=0 HEAD^1 2>/dev/null || echo "")
+          if [ -n "$LAST_TAG" ]; then
+            git log "$LAST_TAG"..HEAD --pretty=format:"- %s" > CHANGELOG_CURRENT.md
+          else
+            git log --pretty=format:"- %s" > CHANGELOG_CURRENT.md
+          fi
+          
+      - name: Create release package
+        run: |
+          mkdir release/
+          cp src/git-security-audit.sh release/
+          tar -czf release/git-security-audit-${GITHUB_REF_NAME}.tar.gz src/ docs/ examples/
+          
+      - name: Sign release artifacts
+        env:
+          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+        run: |
+          echo "$GPG_PRIVATE_KEY" | gpg --batch --import
+          cd release/
+          for file in *; do
+            gpg --batch --yes --passphrase "$GPG_PASSPHRASE" --detach-sign --armor "$file"
+          done
+          
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: release/*
+          body_path: CHANGELOG_CURRENT.md
+          draft: false
+          prerelease: false

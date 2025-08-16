@@ -1,0 +1,19 @@
+# <type>(<scope>): <subject>
+#
+# <body>
+#
+# <footer>
+
+# Types:
+# feat: new feature
+# fix: bug fix
+# docs: documentation
+# style: formatting
+# refactor: code refactoring
+# test: adding tests
+# chore: maintenance
+
+# Examples:
+# feat(patterns): add support for Stripe API keys
+# fix(entropy): handle edge case with empty strings
+# docs(readme): update installation instructions

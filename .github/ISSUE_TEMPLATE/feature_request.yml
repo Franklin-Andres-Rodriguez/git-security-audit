@@ -1,0 +1,110 @@
+name: 💡 Feature Request
+description: Suggest a new feature or improvement
+title: "[Feature]: "
+labels: ["enhancement", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for suggesting a new feature! 🚀
+        
+        Help us understand your needs better by providing detailed information.
+
+  - type: dropdown
+    id: feature_category
+    attributes:
+      label: Feature Category
+      description: What category does this feature fall into?
+      options:
+        - Secret Detection (new patterns, algorithms)
+        - Compliance (new frameworks, checks)
+        - Output & Reporting (formats, visualizations)
+        - Performance (speed, memory usage)
+        - User Experience (CLI, error messages)
+        - Integration (CI/CD, tools)
+        - Security (authentication, encryption)
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem Description
+      description: |
+        What problem does this feature solve? 
+        Is your feature request related to a specific pain point?
+      placeholder: "I'm frustrated when..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed Solution
+      description: Describe the solution you'd like to see
+      placeholder: "I would like the tool to..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternative Solutions
+      description: |
+        Have you considered any alternative solutions or workarounds?
+        What other tools handle this use case?
+      placeholder: "I've tried using X tool, but..."
+
+  - type: textarea
+    id: use_case
+    attributes:
+      label: Use Case & Context
+      description: |
+        Describe your specific use case and how this feature would fit into your workflow
+      placeholder: |
+        - Team size: 10 developers
+        - Repository type: Microservices
+        - Compliance requirements: PCI DSS
+        - Current workflow: Daily scans in CI/CD
+    validations:
+      required: true
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority Level
+      description: How important is this feature for your use case?
+      options:
+        - Critical (blocking our adoption/workflow)
+        - High (would significantly improve our workflow)
+        - Medium (nice to have improvement)
+        - Low (minor convenience)
+    validations:
+      required: true
+
+  - type: textarea
+    id: implementation
+    attributes:
+      label: Implementation Ideas
+      description: |
+        If you have thoughts on how this could be implemented, share them here
+        (technical details, API design, command-line interface, etc.)
+      placeholder: |
+        Suggested CLI interface:
+        ```bash
+        git-security-audit --new-feature --option value
+        ```
+
+  - type: checkboxes
+    id: contribution
+    attributes:
+      label: Contribution Interest
+      description: Would you be interested in contributing to this feature?
+      options:
+        - label: I'd like to help implement this feature
+        - label: I'd be willing to test early versions
+        - label: I can provide domain expertise/consultation
+        - label: I'd prefer someone else implements it
+
+---
