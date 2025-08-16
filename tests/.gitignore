@@ -1,0 +1,5 @@
+
+# Test repositories (generated dynamically)
+/tmp/git-security-audit-test-repos/
+tests/fixtures/test-repo/
+*.test-repo/
