@@ -1,30 +1,60 @@
-# Security audit outputs
+# Security audit results (never commit scan data)
 security-audit/
-*.audit
-*.scan
+audit-results/
+scan-*/
 
-# OS
-.DS_Store
-Thumbs.db
+# Test repositories and data
+test-*/
+*-test/
+test.json
+quick-audit.json
 
-# Editors
+# Temporary files and backups
+*.backup
+*.before-*
+*.tmp
+temp_*
+comprehensive-*.sh
+
+# Build artifacts and downloads
+*.tar.gz
+*.zip
+dist/
+build/
+
+# IDE and editor files
 .vscode/
 .idea/
 *.swp
 *.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Node modules (si usas npm para tooling)
+node_modules/
+npm-debug.log*
+
+# Python cache (si usas Python para helpers)
+__pycache__/
+*.py[cod]
+*$py.class
 
 # Logs
 *.log
-npm-debug.log*
+logs/
 
-# Temporary files
-*.tmp
-*.temp
-.temp/
+# Environment files with potential secrets
+.env
+.env.local
+.env.*.local
 
-# Node modules (si usas tools de JS)
-node_modules/
-
-# Python cache (si usas tools de Python)
-__pycache__/
-*.pyc
+# Language specific
+typescript
