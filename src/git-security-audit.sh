@@ -309,7 +309,9 @@ EOF
 # Repository analysis functions
 analyze_repository_metrics() {
     log_info "Analyzing repository structure and metrics..."
-    
+    scan_common_patterns
+    display_result
+
     local metrics_file="$AUDIT_DIR/metrics/repository-metrics.json"
     
     # Collect repository metrics with timeouts and limits
