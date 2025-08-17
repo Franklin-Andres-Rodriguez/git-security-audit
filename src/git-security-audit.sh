@@ -1,630 +1,718 @@
 #!/bin/bash
 
-# Git Security Audit Framework
-# Professional-grade security auditing for Git repositories
-# Version: 2.0.1
+# Git Security Audit Framework - Generalized
+# Purpose: Comprehensive security scanning and secret detection across projects
+# Author: DevSecOps Framework v2.0
+# Usage: ./git-security-audit.sh [options]
 
 set -euo pipefail
 
-# Global configuration
-readonly VERSION="2.0.1"
-readonly SCRIPT_NAME="git-security-audit"
-readonly GITHUB_REPO="https://github.com/Franklin-Andres-Rodriguez/git-security-audit"
+# Script metadata
+SCRIPT_NAME="Git Security Audit Framework"
+VERSION="2.0.0"
+CREATED_DATE=$(date +%Y-%m-%d)
 
-# Color codes for output
-readonly RED='\033[0;31m'
-readonly GREEN='\033[0;32m'
-readonly YELLOW='\033[1;33m'
-readonly BLUE='\033[0;34m'
-readonly PURPLE='\033[0;35m'
-readonly CYAN='\033[0;36m'
-readonly NC='\033[0m' # No Color
+# Colors and formatting
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+PURPLE='\033[0;35m'
+CYAN='\033[0;36m'
+NC='\033[0m' # No Color
+BOLD='\033[1m'
 
 # Default configuration
-SCAN_TYPE="quick"
-ENABLE_ENTROPY=false
+AUDIT_DIR="security-audit/scan-$(date +%Y%m%d-%H%M%S)"
+SCAN_TYPE="comprehensive"
 OUTPUT_FORMAT="text"
-VERBOSE=false
-QUIET=false
-SECRET_SEARCH=""
+TARGET_SECRET=""
+CUSTOM_PATTERNS_FILE=""
+BRANCH_SCOPE="all"
+DEPTH_LIMIT=""
+EXCLUDE_PATTERNS="node_modules|\.git|build|dist|vendor"
+ENABLE_ENTROPY_ANALYSIS=false
 COMPLIANCE_MODE=""
-OUTPUT_FILE=""
-EXCLUDE_PATTERNS=()
+VERBOSITY="normal"
 
-# Logging functions
-log_info() {
-    [[ "$QUIET" == true ]] && return
-    echo -e "${BLUE}ℹ️  $1${NC}" >&2
-}
+# Predefined secret patterns with descriptions
+declare -A SECRET_PATTERNS=(
+    # API Keys and Tokens
+    ["generic_api_keys"]="[A-Za-z0-9_-]{20,50}"
+    ["aws_access_key"]="AKIA[0-9A-Z]{16}"
+    ["aws_secret_key"]="[A-Za-z0-9/+=]{40}"
+    ["github_token"]="ghp_[A-Za-z0-9]{36}"
+    ["github_oauth"]="gho_[A-Za-z0-9]{36}"
+    ["gitlab_token"]="glpat-[A-Za-z0-9_-]{20}"
+    ["azure_storage"]="DefaultEndpointsProtocol=https;AccountName=[^;]+;AccountKey=[A-Za-z0-9+/=]+=="
+    ["google_api"]="AIza[0-9A-Za-z_-]{35}"
+    ["slack_token"]="xox[baprs]-[0-9]+-[0-9A-Za-z]+"
+    ["discord_bot"]="[MN][A-Za-z\d]{23}\.[\w-]{6}\.[\w-]{27}"
+    
+    # JWT and Authentication
+    ["jwt_token"]="eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+"
+    ["bearer_token"]="Bearer [A-Za-z0-9_-]+"
+    ["basic_auth"]="Basic [A-Za-z0-9+/=]+"
+    
+    # Database and Services
+    ["mysql_connection"]="mysql://[^:]+:[^@]+@[^/]+/[^?]+"
+    ["postgres_connection"]="postgres://[^:]+:[^@]+@[^/]+/[^?]+"
+    ["mongodb_connection"]="mongodb://[^:]+:[^@]+@[^/]+/[^?]+"
+    ["redis_url"]="redis://[^:]*:[^@]*@[^:]+:[0-9]+/[0-9]+"
+    
+    # Cloud and Infrastructure
+    ["docker_auth"]="[\"']auths[\"']:\s*{[^}]*[\"']auth[\"']:\s*[\"'][A-Za-z0-9+/=]+[\"']"
+    ["ssh_private_key"]="-----BEGIN [A-Z ]+PRIVATE KEY-----"
+    ["pgp_private_key"]="-----BEGIN PGP PRIVATE KEY BLOCK-----"
+    ["ssl_private_key"]="-----BEGIN PRIVATE KEY-----"
+    
+    # High entropy strings (potential secrets)
+    ["high_entropy"]="[A-Za-z0-9+/]{32,}"
+    
+    # Common password patterns
+    ["password_assignment"]="password[\"'\\s]*[:=][\"'\\s]*[^\"'\\s]+"
+    ["secret_assignment"]="secret[\"'\\s]*[:=][\"'\\s]*[^\"'\\s]+"
+    ["key_assignment"]="(?:api_?key|access_?key)[\"'\\s]*[:=][\"'\\s]*[^\"'\\s]+"
+)
 
-log_success() {
-    [[ "$QUIET" == true ]] && return
-    echo -e "${GREEN}✅ $1${NC}" >&2
-}
+# Sensitive file patterns
+SENSITIVE_FILE_PATTERNS=(
+    "*.env*"
+    "*.pem"
+    "*.key"
+    "*.p12"
+    "*.pfx" 
+    "*secret*"
+    "*password*"
+    "*credential*"
+    "*config*"
+    "id_rsa*"
+    "id_dsa*"
+    "id_ecdsa*"
+    "id_ed25519*"
+    "*.ppk"
+    "*.keystore"
+    "*.jks"
+    "*.crt"
+    "*.cer"
+    "*.der"
+    "shadow"
+    "passwd"
+    ".htpasswd"
+    ".netrc"
+    "terraform.tfstate*"
+    "vault.yml"
+    "secrets.yml"
+    "docker-compose.override.yml"
+)
 
-log_warning() {
-    [[ "$QUIET" == true ]] && return
-    echo -e "${YELLOW}⚠️  $1${NC}" >&2
-}
+# Compliance frameworks
+declare -A COMPLIANCE_PATTERNS=(
+    ["pci"]="credit_?card|cvv|pan|[0-9]{4}[-\\s]?[0-9]{4}[-\\s]?[0-9]{4}[-\\s]?[0-9]{4}"
+    ["hipaa"]="ssn|social.security|patient|medical|hipaa|phi"
+    ["gdpr"]="gdpr|personal.data|data.subject|consent|privacy.policy"
+    ["sox"]="financial|sox|sarbanes|audit.trail|material.weakness"
+    ["iso27001"]="information.security|risk.assessment|security.incident|vulnerability"
+)
 
-log_error() {
-    echo -e "${RED}❌ $1${NC}" >&2
-}
-
-log_debug() {
-    [[ "$VERBOSE" == true ]] || return
-    echo -e "${PURPLE}🔍 DEBUG: $1${NC}" >&2
-}
-
-# Help function
-show_help() {
+show_usage() {
     cat << EOF
-${BLUE}🛡️ Git Security Audit Framework v${VERSION}${NC}
+${BOLD}${BLUE}$SCRIPT_NAME v$VERSION${NC}
 
-${CYAN}DESCRIPTION:${NC}
-    Professional-grade security auditing framework for Git repositories with
-    comprehensive secret detection, compliance checking, and enterprise reporting.
+${BOLD}USAGE:${NC}
+    $(basename "$0") [OPTIONS]
 
-${CYAN}USAGE:${NC}
-    ${SCRIPT_NAME} [OPTIONS]
+${BOLD}OPTIONS:${NC}
+    ${YELLOW}Basic Scanning:${NC}
+    -s, --secret VALUE          Search for specific secret value
+    -p, --patterns FILE         Load custom patterns from file
+    -t, --type TYPE            Scan type: quick|comprehensive|secrets|files|compliance
+    -o, --output FORMAT        Output format: text|json|csv|html
+    
+    ${YELLOW}Scope Control:${NC}
+    -b, --branches SCOPE       Branch scope: all|current|main|pattern
+    -d, --depth NUMBER         Limit git history depth
+    -e, --exclude PATTERNS     Exclude file patterns (comma-separated)
+    
+    ${YELLOW}Advanced Options:${NC}
+    --entropy                  Enable entropy analysis for unknown secrets
+    --compliance MODE          Run compliance checks: pci|hipaa|gdpr|sox|iso27001
+    -v, --verbose              Increase verbosity
+    --quiet                    Suppress non-critical output
+    
+    ${YELLOW}Help & Information:${NC}
+    -h, --help                 Show this help message
+    --list-patterns            List all built-in secret patterns
+    --version                  Show version information
 
-${CYAN}SCAN TYPES:${NC}
-    --type quick          Fast scan for common secrets (default)
-    --type comprehensive  Deep scan with entropy analysis
-    --type secrets        Focus only on secret detection
-    --type compliance     Compliance-focused audit
+${BOLD}EXAMPLES:${NC}
+    ${GREEN}# Quick security scan${NC}
+    $(basename "$0") --type quick
+    
+    ${GREEN}# Search for specific API key${NC}
+    $(basename "$0") --secret "your-api-key-here"
+    
+    ${GREEN}# Comprehensive scan with entropy analysis${NC}
+    $(basename "$0") --type comprehensive --entropy
+    
+    ${GREEN}# PCI compliance check${NC}
+    $(basename "$0") --compliance pci --output json
+    
+    ${GREEN}# Scan only main branches${NC}
+    $(basename "$0") --branches main --type secrets
 
-${CYAN}SECRET DETECTION:${NC}
-    --entropy            Enable high-entropy string analysis
-    --secret VALUE       Search for specific secret value
-    --patterns FILE      Use custom patterns file
-
-${CYAN}COMPLIANCE FRAMEWORKS:${NC}
-    --compliance pci     PCI DSS compliance check
-    --compliance hipaa   HIPAA compliance check  
-    --compliance gdpr    GDPR compliance check
-    --compliance sox     SOX compliance check
-    --compliance iso     ISO 27001 compliance check
-
-${CYAN}OUTPUT OPTIONS:${NC}
-    --output text        Human-readable text output (default)
-    --output json        JSON format for automation
-    --output csv         CSV format for spreadsheets
-    --output html        HTML report with styling
-    --output-file FILE   Save results to specific file
-
-${CYAN}GENERAL OPTIONS:${NC}
-    --verbose           Enable verbose logging
-    --quiet             Suppress non-essential output
-    --exclude PATTERN   Exclude files matching pattern
-    --help              Show this help message
-    --version           Show version information
-
-${CYAN}EXAMPLES:${NC}
-    # Quick security scan
-    ${SCRIPT_NAME} --type quick
-
-    # Comprehensive audit with entropy analysis
-    ${SCRIPT_NAME} --type comprehensive --entropy --output json
-
-    # Search for specific leaked credential
-    ${SCRIPT_NAME} --secret "AKIA1234567890EXAMPLE" --verbose
-
-    # PCI compliance audit with HTML report
-    ${SCRIPT_NAME} --compliance pci --output html --output-file compliance-report.html
-
-    # Silent scan for CI/CD pipelines
-    ${SCRIPT_NAME} --type secrets --quiet --output json
-
-${CYAN}SUPPORTED SECRET PATTERNS:${NC}
-    - AWS Access Keys (AKIA*, ASIA*)
-    - GitHub Personal Access Tokens
-    - Google API Keys  
-    - JWT Tokens
-    - SSH Private Keys
-    - Database Connection Strings
-    - Basic Authentication
-    - Bearer Tokens
-    - SSL Certificates
-    - API Keys (generic patterns)
-
-${CYAN}COMPLIANCE CAPABILITIES:${NC}
-    - PCI DSS: Credit card data detection
-    - HIPAA: Healthcare information patterns
-    - GDPR: Personal data identification
-    - SOX: Financial audit requirements
-    - ISO 27001: Information security standards
-
-${CYAN}REPOSITORY:${NC}
-    ${GITHUB_REPO}
-
-${CYAN}DOCUMENTATION:${NC}
-    ${GITHUB_REPO}#readme
+${BOLD}SCAN TYPES:${NC}
+    ${CYAN}quick${NC}        - Fast scan for common secrets and sensitive files
+    ${CYAN}comprehensive${NC} - Full repository analysis with all patterns
+    ${CYAN}secrets${NC}      - Focus only on secret detection
+    ${CYAN}files${NC}        - Analyze sensitive file patterns
+    ${CYAN}compliance${NC}   - Run compliance-specific checks
 
 EOF
 }
 
-# Version function
-show_version() {
-    echo "${SCRIPT_NAME} version ${VERSION}"
-    echo "Git Security Audit Framework"
-    echo "Repository: ${GITHUB_REPO}"
+show_patterns() {
+    echo -e "${BOLD}${BLUE}Built-in Secret Patterns:${NC}\n"
+    
+    for pattern_name in "${!SECRET_PATTERNS[@]}"; do
+        pattern="${SECRET_PATTERNS[$pattern_name]}"
+        echo -e "${YELLOW}$pattern_name${NC}: ${CYAN}$pattern${NC}"
+    done
+    
+    echo -e "\n${BOLD}${BLUE}Sensitive File Patterns:${NC}\n"
+    printf '%s\n' "${SENSITIVE_FILE_PATTERNS[@]}" | sort
 }
 
 # Parse command line arguments
 parse_arguments() {
     while [[ $# -gt 0 ]]; do
         case $1 in
-            --type)
+            -s|--secret)
+                TARGET_SECRET="$2"
+                shift 2
+                ;;
+            -p|--patterns)
+                CUSTOM_PATTERNS_FILE="$2"
+                shift 2
+                ;;
+            -t|--type)
                 SCAN_TYPE="$2"
                 shift 2
                 ;;
-            --entropy)
-                ENABLE_ENTROPY=true
-                shift
-                ;;
-            --secret)
-                SECRET_SEARCH="$2"
+            -o|--output)
+                OUTPUT_FORMAT="$2"
                 shift 2
+                ;;
+            -b|--branches)
+                BRANCH_SCOPE="$2"
+                shift 2
+                ;;
+            -d|--depth)
+                DEPTH_LIMIT="$2"
+                shift 2
+                ;;
+            -e|--exclude)
+                EXCLUDE_PATTERNS="$2"
+                shift 2
+                ;;
+            --entropy)
+                ENABLE_ENTROPY_ANALYSIS=true
+                shift
                 ;;
             --compliance)
                 COMPLIANCE_MODE="$2"
                 shift 2
                 ;;
-            --output)
-                OUTPUT_FORMAT="$2"
-                shift 2
-                ;;
-            --output-file)
-                OUTPUT_FILE="$2"
-                shift 2
-                ;;
-            --exclude)
-                EXCLUDE_PATTERNS+=("$2")
-                shift 2
-                ;;
-            --verbose)
-                VERBOSE=true
+            -v|--verbose)
+                VERBOSITY="verbose"
                 shift
                 ;;
             --quiet)
-                QUIET=true
+                VERBOSITY="quiet"
                 shift
                 ;;
-            --help)
-                show_help
+            --list-patterns)
+                show_patterns
                 exit 0
                 ;;
             --version)
-                show_version
+                echo "$SCRIPT_NAME v$VERSION"
+                exit 0
+                ;;
+            -h|--help)
+                show_usage
                 exit 0
                 ;;
             *)
-                log_error "Unknown option: $1"
-                echo "Use --help for usage information."
+                echo -e "${RED}Error: Unknown option $1${NC}" >&2
+                show_usage
                 exit 1
                 ;;
         esac
     done
 }
 
-# Validate scan type
-validate_scan_type() {
-    case "$SCAN_TYPE" in
-        quick|comprehensive|secrets|compliance)
-            log_debug "Scan type validated: $SCAN_TYPE"
-            ;;
-        *)
-            log_error "Invalid scan type: $SCAN_TYPE"
-            echo "Valid types: quick, comprehensive, secrets, compliance"
-            exit 1
-            ;;
-    esac
+# Logging functions
+log_info() {
+    [[ $VERBOSITY != "quiet" ]] && echo -e "${BLUE}ℹ️  $1${NC}"
 }
 
-# Validate output format
-validate_output_format() {
-    case "$OUTPUT_FORMAT" in
-        text|json|csv|html)
-            log_debug "Output format validated: $OUTPUT_FORMAT"
-            ;;
-        *)
-            log_error "Invalid output format: $OUTPUT_FORMAT"
-            echo "Valid formats: text, json, csv, html"
-            exit 1
-            ;;
-    esac
+log_success() {
+    [[ $VERBOSITY != "quiet" ]] && echo -e "${GREEN}✅ $1${NC}"
 }
 
-# Check if we're in a Git repository
-check_git_repository() {
-    if ! git rev-parse --git-dir >/dev/null 2>&1; then
-        log_error "Not a Git repository. Please run this tool from within a Git repository."
-        exit 1
+log_warning() {
+    echo -e "${YELLOW}⚠️  $1${NC}"
+}
+
+log_error() {
+    echo -e "${RED}❌ $1${NC}" >&2
+}
+
+log_verbose() {
+    [[ $VERBOSITY == "verbose" ]] && echo -e "${CYAN}🔍 $1${NC}"
+}
+
+# Initialize audit environment
+initialize_audit() {
+    log_info "Initializing security audit environment..."
+    
+    # Create audit directory structure
+    mkdir -p "$AUDIT_DIR"/{findings,reports,metrics,raw-data}
+    
+    # Create audit metadata
+    cat > "$AUDIT_DIR/audit-metadata.json" << EOF
+{
+    "audit_id": "$(uuidgen 2>/dev/null || date +%s)",
+    "script_version": "$VERSION",
+    "scan_type": "$SCAN_TYPE",
+    "target_secret": "$([[ -n "$TARGET_SECRET" ]] && echo "***REDACTED***" || echo "none")",
+    "timestamp": "$(date -Iseconds)",
+    "repository_path": "$(pwd)",
+    "git_repository": "$(git remote get-url origin 2>/dev/null || echo "local")",
+    "git_branch": "$(git branch --show-current 2>/dev/null || echo "unknown")",
+    "git_commit": "$(git rev-parse HEAD 2>/dev/null || echo "unknown")",
+    "scan_parameters": {
+        "branch_scope": "$BRANCH_SCOPE",
+        "depth_limit": "$DEPTH_LIMIT",
+        "exclude_patterns": "$EXCLUDE_PATTERNS",
+        "entropy_analysis": $ENABLE_ENTROPY_ANALYSIS,
+        "compliance_mode": "$COMPLIANCE_MODE",
+        "verbosity": "$VERBOSITY"
+    }
+}
+EOF
+
+    log_success "Audit environment initialized: $AUDIT_DIR"
+}
+
+# Repository analysis functions
+analyze_repository_metrics() {
+    log_info "Analyzing repository structure and metrics..."
+    
+    local metrics_file="$AUDIT_DIR/metrics/repository-metrics.json"
+    
+    # Collect repository metrics with timeouts and limits
+    local total_commits=$(timeout 15s git rev-list --all --count 2>/dev/null || echo "0")
+    local total_branches=$(timeout 5s git branch -a 2>/dev/null | wc -l || echo "0")
+    local repo_size=$(timeout 10s du -sh .git 2>/dev/null | cut -f1 || echo "unknown")
+    local objects_info="metrics_disabled_for_performance"
+    local total_files=$(timeout 20s find . -maxdepth 3 -type f | grep -Ev "$EXCLUDE_PATTERNS" | wc -l 2>/dev/null || echo "0")
+    
+    # Create metrics JSON
+    cat > "$metrics_file" << METRICS_EOF
+{
+    "repository_metrics": {
+        "total_commits": $total_commits,
+        "total_branches": $total_branches,
+        "repository_size": "$repo_size",
+        "total_files": $total_files,
+        "objects_info": "$objects_info",
+        "scan_scope": {
+            "branch_scope": "$BRANCH_SCOPE",
+            "depth_limit": "$DEPTH_LIMIT",
+            "excluded_patterns": "$EXCLUDE_PATTERNS"
+        }
+    }
+}
+METRICS_EOF
+
+    log_verbose "Repository metrics: $total_commits commits, $total_branches branches, $total_files files"
+    log_success "Repository metrics analysis completed"
+}
+
+scan_secret_patterns() {
+    log_info "Scanning for secret patterns..."
+    
+    local findings_dir="$AUDIT_DIR/findings"
+    local total_findings=0
+    
+    # Load custom patterns if provided
+    if [[ -n "$CUSTOM_PATTERNS_FILE" && -f "$CUSTOM_PATTERNS_FILE" ]]; then
+        log_info "Loading custom patterns from $CUSTOM_PATTERNS_FILE"
+        source "$CUSTOM_PATTERNS_FILE"
     fi
-    log_debug "Git repository detected"
-}
-
-# Get repository information
-get_repo_info() {
-    local repo_path
-    repo_path=$(git rev-parse --show-toplevel)
-    log_debug "Repository path: $repo_path"
-    echo "$repo_path"
-}
-
-# Create output directory
-create_output_directory() {
-    local timestamp
-    timestamp=$(date +%Y%m%d-%H%M%S)
-    local output_dir="security-audit/scan-${timestamp}"
     
-    mkdir -p "$output_dir/reports"
-    mkdir -p "$output_dir/logs"
+    # Scan each pattern
+    for pattern_name in "${!SECRET_PATTERNS[@]}"; do
+        local pattern="${SECRET_PATTERNS[$pattern_name]}"
+        local findings_file="$findings_dir/${pattern_name}-findings.txt"
+        
+        log_verbose "Scanning pattern: $pattern_name"
+        
+        # Build git log command with appropriate scope
+        local git_cmd="git log --all -p"
+        [[ -n "$DEPTH_LIMIT" ]] && git_cmd+=" --max-count=$DEPTH_LIMIT"
+        
+        # Search for pattern in git history
+        if $git_cmd | grep -E "$pattern" > "$findings_file" 2>/dev/null; then
+            local count=$(wc -l < "$findings_file")
+            total_findings=$((total_findings + count))
+            log_warning "Found $count potential secrets for pattern: $pattern_name"
+        else
+            rm -f "$findings_file"
+        fi
+    done
     
-    log_debug "Output directory created: $output_dir"
-    echo "$output_dir"
-}
-
-# Basic secret patterns (demo implementation)
-detect_secrets() {
-    local repo_path="$1"
-    local findings=0
-    
-    log_info "Scanning for secrets..."
-    
-    # AWS Access Keys
-    if git log --all -p | grep -E "AKIA[0-9A-Z]{16}" >/dev/null 2>&1; then
-        log_warning "Potential AWS Access Key detected in commit history"
-        ((findings++))
+    # Specific secret search if provided
+    if [[ -n "$TARGET_SECRET" ]]; then
+        log_info "Searching for specific secret value..."
+        local secret_findings="$findings_dir/target-secret-findings.txt"
+        
+        # Search in git history
+        git log --all -p -S "$TARGET_SECRET" > "$secret_findings" 2>/dev/null || true
+        
+        if [[ -s "$secret_findings" ]]; then
+            local count=$(grep -c "^commit" "$secret_findings" || echo "0")
+            log_error "Target secret found in $count commits!"
+            total_findings=$((total_findings + count))
+        else
+            rm -f "$secret_findings"
+            log_success "Target secret not found in git history"
+        fi
     fi
     
-    # GitHub Tokens  
-    if git log --all -p | grep -E "ghp_[a-zA-Z0-9]{36}" >/dev/null 2>&1; then
-        log_warning "Potential GitHub Personal Access Token detected"
-        ((findings++))
-    fi
-    
-    # Generic API keys
-    if git log --all -p | grep -iE "(api[_-]?key|secret[_-]?key)" >/dev/null 2>&1; then
-        log_warning "Potential API key patterns detected"
-        ((findings++))
-    fi
-    
-    # Private keys
-    if git log --all -p | grep -E "-----BEGIN.*PRIVATE KEY-----" >/dev/null 2>&1; then
-        log_warning "Private key detected in commit history"
-        ((findings++))
-    fi
-    
-    return $findings
+    echo "$total_findings" > "$AUDIT_DIR/metrics/total-secret-findings.txt"
 }
 
-# Entropy analysis (placeholder)
-analyze_entropy() {
-    log_info "Performing entropy analsis..."
-    log_debug "Entropy analysis is a premium feature - basic implementation active"
-    return 0
-}
-
-# Compliance checking (placeholder)
-check_compliance() {
-    local mode="$1"
+# Sensitive file analysis
+analyze_sensitive_files() {
+    log_info "Analyzing sensitive file patterns..."
     
-    log_info "Running compliance check for: ${mode^^}"
+    local files_dir="$AUDIT_DIR/findings"
+    local sensitive_files="$files_dir/sensitive-files-history.txt"
     
-    case "$mode" in
-        pci)
-            log_info "Checking PCI DSS compliance..."
-            # Credit card number patterns
-            if git log --all -p | grep -E "[0-9]{4}[- ]?[0-9]{4}[- ]?[0-9]{4}[- ]?[0-9]{4}" >/dev/null 2>&1; then
-                log_warning "Potential credit card numbers detected"
-                return 1
+    # Find sensitive files in git history
+    {
+        for pattern in "${SENSITIVE_FILE_PATTERNS[@]}"; do
+            git log --all --name-only | grep -i "$pattern" 2>/dev/null || true
+        done
+    } | sort | uniq > "$sensitive_files"
+    
+    local count=$(wc -l < "$sensitive_files" 2>/dev/null || echo "0")
+    if [[ $count -gt 0 ]]; then
+        log_warning "Found $count sensitive files in git history"
+        
+        # Analyze current presence
+        local current_sensitive="$files_dir/current-sensitive-files.txt"
+        > "$current_sensitive"
+        
+        while read -r file; do
+            if [[ -f "$file" ]]; then
+                echo "$file" >> "$current_sensitive"
             fi
-            ;;
-        hipaa)
-            log_info "Checking HIPAA compliance..."
-            # SSN patterns
-            if git log --all -p | grep -E "[0-9]{3}-[0-9]{2}-[0-9]{4}" >/dev/null 2>&1; then
-                log_warning "Potential SSN patterns detected"
-                return 1
-            fi
-            ;;
-        gdpr)
-            log_info "Checking GDPR compliance..."
-            # Email patterns (basic)
-            if git log --all -p | grep -E "[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}" >/dev/null 2>&1; then
-                log_info "Email addresses detected - review for personal data compliance"
-            fi
-            ;;
-        sox|iso)
-            log_info "Checking ${mode^^} compliance..."
-            log_info "General security audit performed"
-            ;;
-        *)
-            log_error "Unknown compliance mode: $mode"
-            return 1
-            ;;
-    esac
-    
-    return 0
+        done < "$sensitive_files"
+        
+        local current_count=$(wc -l < "$current_sensitive" 2>/dev/null || echo "0")
+        [[ $current_count -gt 0 ]] && log_warning "$current_count sensitive files exist in current working directory"
+    else
+        log_success "No sensitive files found in git history"
+        rm -f "$sensitive_files"
+    fi
 }
 
-# Generate output
-generate_output() {
-    local output_dir="$1"
-    local findings="$2"
+# Entropy analysis for unknown secrets
+perform_entropy_analysis() {
+    [[ $ENABLE_ENTROPY_ANALYSIS != true ]] && return 0
     
-    case "$OUTPUT_FORMAT" in
-        text)
-            generate_text_output "$output_dir" "$findings"
-            ;;
-        json)
-            generate_json_output "$output_dir" "$findings"
-            ;;
-        csv)
-            generate_csv_output "$output_dir" "$findings"
-            ;;
-        html)
-            generate_html_output "$output_dir" "$findings"
-            ;;
-    esac
+    log_info "Performing entropy analysis for potential unknown secrets..."
+    
+    local entropy_findings="$AUDIT_DIR/findings/high-entropy-strings.txt"
+    
+    # Extract strings with high entropy (simplified approach)
+    git log --all -p | grep -oE '[A-Za-z0-9+/=]{24,}' | while read -r string; do
+        # Simple entropy check (character diversity)
+        local unique_chars=$(echo "$string" | fold -w1 | sort | uniq | wc -l)
+        local string_length=${#string}
+        local entropy_ratio=$((unique_chars * 100 / string_length))
+        
+        # If entropy ratio > 60%, consider it high entropy
+        if [[ $entropy_ratio -gt 60 && $string_length -gt 20 ]]; then
+            echo "$string (entropy: ${entropy_ratio}%)" >> "$entropy_findings"
+        fi
+    done 2>/dev/null || true
+    
+    if [[ -f "$entropy_findings" ]]; then
+        local count=$(wc -l < "$entropy_findings")
+        [[ $count -gt 0 ]] && log_warning "Found $count high-entropy strings (potential secrets)"
+    fi
 }
 
-# Text output
-generate_text_output() {
-    local output_dir="$1"
-    local findings="$2"
-    local report_file="$output_dir/reports/security-audit-report.txt"
+# Compliance-specific checks
+run_compliance_checks() {
+    [[ -z "$COMPLIANCE_MODE" ]] && return 0
+    
+    log_info "Running compliance checks for: $COMPLIANCE_MODE"
+    
+    local compliance_findings="$AUDIT_DIR/findings/compliance-${COMPLIANCE_MODE}.txt"
+    
+    if [[ -n "${COMPLIANCE_PATTERNS[$COMPLIANCE_MODE]}" ]]; then
+        local pattern="${COMPLIANCE_PATTERNS[$COMPLIANCE_MODE]}"
+        
+        git log --all -p | grep -iE "$pattern" > "$compliance_findings" 2>/dev/null || true
+        
+        if [[ -s "$compliance_findings" ]]; then
+            local count=$(wc -l < "$compliance_findings")
+            log_warning "Found $count potential $COMPLIANCE_MODE compliance issues"
+        else
+            log_success "No $COMPLIANCE_MODE compliance issues detected"
+            rm -f "$compliance_findings"
+        fi
+    else
+        log_error "Unknown compliance mode: $COMPLIANCE_MODE"
+    fi
+}
+
+# Risk assessment
+assess_security_risks() {
+    log_info "Assessing security risks..."
+    
+    local risk_file="$AUDIT_DIR/reports/risk-assessment.txt"
     
     {
-        echo "🛡️ Git Security Audit Framework v$VERSION"
-        echo "Security audit for: $(pwd)"
-        echo "Timestamp: $(date)"
+        echo "SECURITY RISK ASSESSMENT"
+        echo "========================"
+        echo "Generated: $(date)"
         echo ""
         
-        if [ "$findings" -eq 0 ]; then
-            echo "✅ SECURITY STATUS: No obvious secrets detected"
+        # Repository exposure risk
+        echo "Repository Exposure Risk:"
+        if git remote -v 2>/dev/null | grep -qE "(github\.com|gitlab\.com|bitbucket\.org)"; then
+            echo "❌ HIGH RISK: Repository hosted on public platform"
+            git remote -v
         else
-            echo "⚠️ SECURITY STATUS: $findings potential issues detected"
+            echo "⚠️ MEDIUM RISK: Repository hosting unclear or private"
+        fi
+        echo ""
+        
+        # Secret findings summary
+        local total_findings=$(cat "$AUDIT_DIR/metrics/total-secret-findings.txt" 2>/dev/null || echo "0")
+        echo "Secret Detection Summary:"
+        echo "Total potential secrets found: $total_findings"
+        
+        if [[ $total_findings -gt 0 ]]; then
+            echo "❌ CRITICAL: Secrets detected in repository history"
+        else
+            echo "✅ GOOD: No obvious secrets detected"
+        fi
+        echo ""
+        
+        # File risk assessment
+        local sensitive_files=$(wc -l < "$AUDIT_DIR/findings/sensitive-files-history.txt" 2>/dev/null || echo "0")
+        echo "Sensitive Files:"
+        echo "Sensitive files in history: $sensitive_files"
+        
+        if [[ $sensitive_files -gt 0 ]]; then
+            echo "⚠️ WARNING: Sensitive files detected in history"
+        else
+            echo "✅ GOOD: No sensitive files detected"
+        fi
+        
+    } > "$risk_file"
+    
+    log_success "Risk assessment completed"
+}
+
+# Generate comprehensive report
+generate_report() {
+    log_info "Generating security audit report..."
+    
+    local report_file="$AUDIT_DIR/reports/security-audit-report.txt"
+    local json_report="$AUDIT_DIR/reports/security-audit-report.json"
+    
+    # Text report
+    {
+        echo -e "${BOLD}SECURITY AUDIT REPORT${NC}"
+        echo "=================================================="
+        echo "Audit ID: $(grep audit_id "$AUDIT_DIR/audit-metadata.json" | cut -d'"' -f4)"
+        echo "Generated: $(date)"
+        echo "Repository: $(git remote get-url origin 2>/dev/null || pwd)"
+        echo "Branch: $(git branch --show-current 2>/dev/null || echo "unknown")"
+        echo ""
+        
+        echo -e "${BOLD}SCAN CONFIGURATION${NC}"
+        echo "Scan Type: $SCAN_TYPE"
+        echo "Branch Scope: $BRANCH_SCOPE"
+        echo "Entropy Analysis: $ENABLE_ENTROPY_ANALYSIS"
+        echo "Compliance Mode: ${COMPLIANCE_MODE:-"none"}"
+        echo ""
+        
+        echo -e "${BOLD}FINDINGS SUMMARY${NC}"
+        local total_findings=$(cat "$AUDIT_DIR/metrics/total-secret-findings.txt" 2>/dev/null || echo "0")
+        echo "Total Secret Findings: $total_findings"
+        
+        # List all finding files
+        if ls "$AUDIT_DIR/findings/"*-findings.txt >/dev/null 2>&1; then
+            echo ""
+            echo "Detailed Findings:"
+            for finding_file in "$AUDIT_DIR/findings/"*-findings.txt; do
+                local filename=$(basename "$finding_file")
+                local count=$(wc -l < "$finding_file")
+                echo "  ${filename%%-findings.txt}: $count issues"
+            done
         fi
         
         echo ""
-        echo "📋 SCAN CONFIGURATION:"
-        echo "   Type: $SCAN_TYPE"
-        echo "   Entropy Analysis: $ENABLE_ENTROPY"
-        echo "   Output Format: $OUTPUT_FORMAT"
-        
-        if [ -n "$COMPLIANCE_MODE" ]; then
-            echo "   Compliance Mode: ${COMPLIANCE_MODE^^}"
+        echo -e "${BOLD}RECOMMENDATIONS${NC}"
+        if [[ $total_findings -gt 0 ]]; then
+            echo "❌ IMMEDIATE ACTION REQUIRED:"
+            echo "1. Review all identified secrets and revoke/rotate compromised credentials"
+            echo "2. Implement git history rewriting to remove secrets permanently"
+            echo "3. Add pre-commit hooks to prevent future secret commits"
+            echo "4. Implement secret scanning in CI/CD pipeline"
+        else
+            echo "✅ SECURITY STATUS: GOOD"
+            echo "1. Consider implementing preventive controls (pre-commit hooks)"
+            echo "2. Schedule regular security audits"
+            echo "3. Implement secret management solution"
         fi
         
         echo ""
-        echo "📊 RESULTS SUMMARY:"
-        echo "   Total Findings: $findings"
-        echo "   Scan Directory: $output_dir"
+        echo "Detailed audit data available in: $AUDIT_DIR"
+        
+    } > "$report_file"
+    
+    # JSON report for automation
+    {
+        echo "{"
+        echo "  \"audit_metadata\": $(cat "$AUDIT_DIR/audit-metadata.json"),"
+        echo "  \"repository_metrics\": $(cat "$AUDIT_DIR/metrics/repository-metrics.json" 2>/dev/null || echo "{}"),"
+        echo "  \"total_findings\": $(cat "$AUDIT_DIR/metrics/total-secret-findings.txt" 2>/dev/null || echo "0"),"
+        echo "  \"findings_files\": ["
+        
+        local first=true
+        if ls "$AUDIT_DIR/findings/"*-findings.txt >/dev/null 2>&1; then
+            for finding_file in "$AUDIT_DIR/findings/"*-findings.txt; do
+                [[ $first == true ]] && first=false || echo ","
+                local filename=$(basename "$finding_file")
+                local count=$(wc -l < "$finding_file")
+                echo -n "    {\"type\": \"${filename%%-findings.txt}\", \"count\": $count, \"file\": \"$finding_file\"}"
+            done
+        fi
         
         echo ""
-        echo "📋 RECOMMENDED NEXT STEPS:"
+        echo "  ]"
+        echo "}"
+    } > "$json_report"
+    
+    log_success "Reports generated: $report_file"
+}
+
+# Display results
+display_results() {
+    local total_findings=$(cat "$AUDIT_DIR/metrics/total-secret-findings.txt" 2>/dev/null || echo "0")
+    
+    echo ""
+    echo -e "${BOLD}${BLUE}═══════════════════════════════════════════════════════════════${NC}"
+    echo -e "${BOLD}${BLUE}                    SECURITY AUDIT COMPLETE                     ${NC}"
+    echo -e "${BOLD}${BLUE}═══════════════════════════════════════════════════════════════${NC}"
+    echo ""
+    
+    if [[ $total_findings -gt 0 ]]; then
+        echo -e "${RED}🚨 SECURITY ALERT: $total_findings potential secrets found!${NC}"
+        echo ""
+        echo -e "${YELLOW}📋 IMMEDIATE ACTIONS REQUIRED:${NC}"
+        echo "1. Review findings in: $AUDIT_DIR/findings/"
+        echo "2. Revoke and rotate any confirmed secrets"
+        echo "3. Clean git history using git-filter-repo or BFG"
+        echo "4. Implement preventive controls"
+    else
+        echo -e "${GREEN}✅ SECURITY STATUS: No obvious secrets detected${NC}"
+        echo ""
+        echo -e "${BLUE}📋 RECOMMENDED NEXT STEPS:${NC}"
         echo "1. Implement pre-commit secret scanning"
         echo "2. Add CI/CD security gates"
         echo "3. Schedule regular security audits"
-        echo "4. Review and rotate any detected credentials"
-        
-    } | tee "$report_file"
-    
-    if [ -n "$OUTPUT_FILE" ]; then
-        cp "$report_file" "$OUTPUT_FILE"
-        log_info "Report saved to: $OUTPUT_FILE"
     fi
+    
+    echo ""
+    echo -e "${CYAN}📊 Detailed Results:${NC}"
+    echo "   Audit Directory: $AUDIT_DIR"
+    echo "   Text Report: $AUDIT_DIR/reports/security-audit-report.txt"
+    echo "   JSON Report: $AUDIT_DIR/reports/security-audit-report.json"
+    echo ""
 }
 
-# JSON output
-generate_json_output() {
-    local output_dir="$1"
-    local findings="$2"
-    local report_file="$output_dir/reports/security-audit-report.json"
-    
-    cat > "$report_file" << EOF
-{
-  "git_security_audit": {
-    "version": "$VERSION",
-    "timestamp": "$(date -Iseconds)",
-    "repository": "$(pwd)",
-    "scan_configuration": {
-      "type": "$SCAN_TYPE",
-      "entropy_analysis": $ENABLE_ENTROPY,
-      "output_format": "$OUTPUT_FORMAT",
-      "compliance_mode": "$COMPLIANCE_MODE"
-    },
-    "results": {
-      "total_findings": $findings,
-      "security_status": $([ "$findings" -eq 0 ] && echo '"clean"' || echo '"issues_detected"'),
-      "scan_directory": "$output_dir"
-    },
-    "recommendations": [
-      "Implement pre-commit secret scanning",
-      "Add CI/CD security gates", 
-      "Schedule regular security audits",
-      "Review and rotate any detected credentials"
-    ]
-  }
-}
-EOF
-    
-    if [ -n "$OUTPUT_FILE" ]; then
-        cp "$report_file" "$OUTPUT_FILE"
-        log_info "JSON report saved to: $OUTPUT_FILE"
-    fi
-    
-    # Output to stdout for CI/CD integration
-    if [ "$QUIET" != true ]; then
-        cat "$report_file"
-    fi
-}
-
-# CSV output (basic implementation)
-generate_csv_output() {
-    local output_dir="$1"
-    local findings="$2"
-    local report_file="$output_dir/reports/security-audit-report.csv"
-    
-    {
-        echo "timestamp,repository,scan_type,total_findings,security_status"
-        echo "$(date -Iseconds),$(pwd),$SCAN_TYPE,$findings,$([ "$findings" -eq 0 ] && echo 'clean' || echo 'issues_detected')"
-    } > "$report_file"
-    
-    if [ -n "$OUTPUT_FILE" ]; then
-        cp "$report_file" "$OUTPUT_FILE"
-        log_info "CSV report saved to: $OUTPUT_FILE"
-    fi
-}
-
-# HTML output (basic implementation)
-generate_html_output() {
-    local output_dir="$1"
-    local findings="$2"
-    local report_file="$output_dir/reports/security-audit-report.html"
-    
-    cat > "$report_file" << EOF
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Git Security Audit Report</title>
-    <style>
-        body { font-family: Arial, sans-serif; margin: 20px; }
-        .header { color: #2196F3; }
-        .success { color: #4CAF50; }
-        .warning { color: #FF9800; }
-        .info { background: #f0f8ff; padding: 10px; border-left: 4px solid #2196F3; }
-    </style>
-</head>
-<body>
-    <h1 class="header">🛡️ Git Security Audit Report</h1>
-    <div class="info">
-        <p><strong>Repository:</strong> $(pwd)</p>
-        <p><strong>Timestamp:</strong> $(date)</p>
-        <p><strong>Version:</strong> $VERSION</p>
-    </div>
-    
-    <h2>Security Status</h2>
-    $(if [ "$findings" -eq 0 ]; then
-        echo '<p class="success">✅ No obvious secrets detected</p>'
-    else
-        echo '<p class="warning">⚠️ '$findings' potential issues detected</p>'
-    fi)
-    
-    <h2>Scan Configuration</h2>
-    <ul>
-        <li>Type: $SCAN_TYPE</li>
-        <li>Entropy Analysis: $ENABLE_ENTROPY</li>
-        <li>Compliance Mode: $COMPLIANCE_MODE</li>
-    </ul>
-    
-    <h2>Recommendations</h2>
-    <ol>
-        <li>Implement pre-commit secret scanning</li>
-        <li>Add CI/CD security gates</li>
-        <li>Schedule regular security audits</li>
-        <li>Review and rotate any detected credentials</li>
-    </ol>
-    
-    <footer>
-        <p><small>Generated by Git Security Audit Framework v$VERSION</small></p>
-    </footer>
-</body>
-</html>
-EOF
-    
-    if [ -n "$OUTPUT_FILE" ]; then
-        cp "$report_file" "$OUTPUT_FILE"
-        log_info "HTML report saved to: $OUTPUT_FILE"
-    fi
-}
-
-# Main execution function
+# Main execution flow
 main() {
+    # Check if we're in a git repository
+    if ! git rev-parse --git-dir >/dev/null 2>&1; then
+        log_error "Not a git repository. Please run this script from within a git repository."
+        exit 1
+    fi
+    
     # Parse command line arguments
     parse_arguments "$@"
     
-    # Validate inputs
-    validate_scan_type
-    validate_output_format
+    # Display header
+    echo -e "${BOLD}${PURPLE}$SCRIPT_NAME v$VERSION${NC}"
+    echo -e "${BOLD}${PURPLE}Security audit for: $(pwd)${NC}"
+    echo ""
     
-    # Check Git repository
-    check_git_repository
+    # Initialize audit environment
+    initialize_audit
     
-    # Get repository info
-    local repo_path
-    repo_path=$(get_repo_info)
-    
-    # Create output directory
-    local output_dir
-    output_dir=$(create_output_directory)
-    
-    # Show header (unless quiet)
-    if [ "$QUIET" != true ]; then
-        echo -e "${BLUE}🛡️ Git Security Audit Framework v${VERSION}${NC}"
-        echo -e "${BLUE}Security audit for: $repo_path${NC}"
-        echo ""
-    fi
-    
-    # Initialize findings counter
-    local total_findings=0
-    
-    # Execute scan based on type
-    case "$SCAN_TYPE" in
-        quick|secrets)
-            detect_secrets "$repo_path"
-            total_findings=$?
+    # Run appropriate scan type
+    case $SCAN_TYPE in
+        "quick")
+            log_info "Running quick security scan..."
+            analyze_repository_metrics
+            scan_secret_patterns
+            analyze_sensitive_files
             ;;
-        comprehensive)
-            detect_secrets "$repo_path"
-            total_findings=$?
-            
-            if [ "$ENABLE_ENTROPY" = true ]; then
-                analyze_entropy
-                # Add entropy findings to total (placeholder)
-            fi
+        "comprehensive")
+            log_info "Running comprehensive security audit..."
+            analyze_repository_metrics
+            scan_secret_patterns
+            analyze_sensitive_files
+            perform_entropy_analysis
+            run_compliance_checks
+            assess_security_risks
             ;;
-        compliance)
-            if [ -n "$COMPLIANCE_MODE" ]; then
-                check_compliance "$COMPLIANCE_MODE"
-                if [ $? -ne 0 ]; then
-                    ((total_findings++))
-                fi
-            else
-                log_error "Compliance scan requires --compliance option"
-                exit 1
-            fi
+        "secrets")
+            log_info "Running focused secret detection..."
+            scan_secret_patterns
+            perform_entropy_analysis
+            ;;
+        "files")
+            log_info "Running sensitive file analysis..."
+            analyze_sensitive_files
+            ;;
+        "compliance")
+            log_info "Running compliance checks..."
+            run_compliance_checks
+            ;;
+        *)
+            log_error "Invalid scan type: $SCAN_TYPE"
+            exit 1
             ;;
     esac
     
-    # Handle specific secret search
-    if [ -n "$SECRET_SEARCH" ]; then
-        log_info "Searching for specific secret..."
-        if git log --all -p | grep -F "$SECRET_SEARCH" >/dev/null 2>&1; then
-            log_warning "Specified secret found in commit history!"
-            ((total_findings++))
-        else
-            log_success "Specified secret not found in commit history"
-        fi
-    fi
+    # Generate reports
+    generate_report
     
-    # Generate output
-    generate_output "$output_dir" "$total_findings"
-    
-    # Show summary (unless quiet)
-    if [ "$QUIET" != true ]; then
-        echo ""
-        echo -e "${BLUE}📊 Detailed Results:${NC}"
-        echo "   Audit Directory: $output_dir"
-        echo "   Text Report: $output_dir/reports/security-audit-report.txt"
-        echo "   JSON Report: $output_dir/reports/security-audit-report.json"
-    fi
-    
-    # Exit code based on findings
-    exit $total_findings
+    # Display results
+    display_results
 }
 
 # Execute main function with all arguments
