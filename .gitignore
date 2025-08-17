@@ -1,4 +1,4 @@
-# Security audit results (never commit scan data)
+# Security audit results (nunca commitear scan data)
 security-audit/
 audit-results/
 scan-*/
@@ -14,47 +14,15 @@ quick-audit.json
 *.before-*
 *.tmp
 temp_*
-comprehensive-*.sh
 
 # Build artifacts and downloads
 *.tar.gz
 *.zip
-dist/
-build/
-
-# IDE and editor files
-.vscode/
-.idea/
-*.swp
-*.swo
-*~
-
-# OS generated files
-.DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
-Thumbs.db
-
-# Node modules (si usas npm para tooling)
-node_modules/
-npm-debug.log*
-
-# Python cache (si usas Python para helpers)
-__pycache__/
-*.py[cod]
-*$py.class
-
-# Logs
-*.log
-logs/
 
 # Environment files with potential secrets
 .env
 .env.local
-.env.*.local
 
-# Language specific
-typescript
+# OS generated files
+.DS_Store
+Thumbs.db
