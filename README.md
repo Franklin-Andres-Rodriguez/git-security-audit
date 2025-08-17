@@ -1,11 +1,11 @@
 # 🛡️ Git Security Audit Framework
 
-[![CI/CD Pipeline](https://github.com/username/git-security-audit/actions/workflows/ci.yml/badge.svg)](https://github.com/username/git-security-audit/actions)
-[![Security Scan](https://github.com/username/git-security-audit/actions/workflows/security.yml/badge.svg)](https://github.com/username/git-security-audit/security)
+[![CI/CD Pipeline](https://github.com/Franklin-Andres-Rodriguez/git-security-audit/actions/workflows/ci.yml/badge.svg)](https://github.com/Franklin-Andres-Rodriguez/git-security-audit/actions)
+[![Security Scan](https://github.com/Franklin-Andres-Rodriguez/git-security-audit/actions/workflows/security.yml/badge.svg)](https://github.com/Franklin-Andres-Rodriguez/git-security-audit/security)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Shell](https://img.shields.io/badge/Shell-Bash-green.svg)](https://www.gnu.org/software/bash/)
-[![Version](https://img.shields.io/github/v/release/username/git-security-audit)](https://github.com/username/git-security-audit/releases)
-[![Downloads](https://img.shields.io/github/downloads/username/git-security-audit/total)](https://github.com/username/git-security-audit/releases)
+[![Version](https://img.shields.io/github/v/release/Franklin-Andres-Rodriguez/git-security-audit)](https://github.com/Franklin-Andres-Rodriguez/git-security-audit/releases)
+[![Downloads](https://img.shields.io/github/downloads/Franklin-Andres-Rodriguez/git-security-audit/total)](https://github.com/Franklin-Andres-Rodriguez/git-security-audit/releases)
 
 > **Professional-grade security auditing framework for Git repositories with comprehensive secret detection, compliance checking, and enterprise-ready reporting.**
 
@@ -39,7 +39,7 @@ In today's DevSecOps landscape, **45% of data breaches** involve leaked credenti
 
 ### One-Line Installation
 ```bash
-curl -fsSL https://raw.githubusercontent.com/username/git-security-audit/main/scripts/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/Franklin-Andres-Rodriguez/git-security-audit/main/scripts/install.sh | bash
 ```
 
 ### Basic Usage
@@ -103,7 +103,7 @@ jobs:
           fetch-depth: 0  # Full history for comprehensive scan
       - name: Run Git Security Audit
         run: |
-          curl -fsSL https://raw.githubusercontent.com/username/git-security-audit/main/scripts/install.sh | bash
+          curl -fsSL https://raw.githubusercontent.com/Franklin-Andres-Rodriguez/git-security-audit/main/scripts/install.sh | bash
           git-security-audit --type secrets --output json > security-results.json
       - name: Upload Security Report
         uses: actions/upload-artifact@v4
@@ -117,7 +117,7 @@ jobs:
 security-audit:
   stage: security
   script:
-    - curl -fsSL https://raw.githubusercontent.com/username/git-security-audit/main/scripts/install.sh | bash
+    - curl -fsSL https://raw.githubusercontent.com/Franklin-Andres-Rodriguez/git-security-audit/main/scripts/install.sh | bash
     - git-security-audit --type comprehensive --output json
   artifacts:
     reports:
@@ -240,7 +240,7 @@ We welcome contributions from the community! Please see our [Contributing Guide]
 ### Quick Development Setup
 ```bash
 # Fork and clone
-git clone https://github.com/yourusername/git-security-audit.git
+git clone https://github.com/Franklin-Andres-Rodriguez/git-security-audit.git
 cd git-security-audit
 
 # Install development dependencies
@@ -270,18 +270,18 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 🌟 Star History
 
-[![Star History Chart](https://api.star-history.com/svg?repos=username/git-security-audit&type=Date)](https://star-history.com/#username/git-security-audit&Date)
+[![Star History Chart](https://api.star-history.com/svg?repos=Franklin-Andres-Rodriguez/git-security-audit&type=Date)](https://star-history.com/#Franklin-Andres-Rodriguez/git-security-audit&Date)
 
 ## 🙏 Acknowledgments
 
 - Inspired by the DevSecOps community's need for accessible security tools
 - Built with ❤️ for developers who care about security
-- Special thanks to all [contributors](https://github.com/username/git-security-audit/graphs/contributors)
+- Special thanks to all [contributors](https://github.com/Franklin-Andres-Rodriguez/git-security-audit/graphs/contributors)
 
 ## 📞 Support & Community
 
-- 💬 [Discussions](https://github.com/username/git-security-audit/discussions) - Ask questions, share ideas
-- 🐛 [Issues](https://github.com/username/git-security-audit/issues) - Report bugs, request features
+- 💬 [Discussions](https://github.com/Franklin-Andres-Rodriguez/git-security-audit/discussions) - Ask questions, share ideas
+- 🐛 [Issues](https://github.com/Franklin-Andres-Rodriguez/git-security-audit/issues) - Report bugs, request features
 - 📧 [Email](mailto:security@yourproject.com) - Direct contact for enterprise support
 - 🐦 [Twitter](https://twitter.com/yourhandle) - Follow for updates
 
@@ -291,6 +291,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 **Made with ❤️ by the DevSecOps community**
 
-[⭐ Star this repo](https://github.com/username/git-security-audit) • [🔀 Fork it](https://github.com/username/git-security-audit/fork) • [📝 Contribute](CONTRIBUTING.md)
+[⭐ Star this repo](https://github.com/Franklin-Andres-Rodriguez/git-security-audit) • [🔀 Fork it](https://github.com/Franklin-Andres-Rodriguez/git-security-audit/fork) • [📝 Contribute](CONTRIBUTING.md)
 
 </div>

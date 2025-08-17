@@ -39,11 +39,11 @@ Improve the CLI experience, error messages, or output formatting.
 ```bash
 # 1. Fork the repository on GitHub
 # 2. Clone your fork
-git clone https://github.com/yourusername/git-security-audit.git
+git clone https://github.com/Franklin-Andres-Rodriguez/git-security-audit.git
 cd git-security-audit
 
 # 3. Add upstream remote
-git remote add upstream https://github.com/username/git-security-audit.git
+git remote add upstream https://github.com/Franklin-Andres-Rodriguez/git-security-audit.git
 
 # 4. Install development dependencies
 ./scripts/setup-dev.sh
@@ -281,7 +281,7 @@ When you create a PR, our template will guide you through:
 - Plugin architecture for extensibility
 
 ### 🔥 **Current Priorities**
-Check our [Project Board](https://github.com/username/git-security-audit/projects) for current priorities and roadmap items.
+Check our [Project Board](https://github.com/Franklin-Andres-Rodriguez/git-security-audit/projects) for current priorities and roadmap items.
 
 ## 🏷️ Issue Labels
 
@@ -314,7 +314,7 @@ We use labels to organize and prioritize work:
 
 ### 📞 **Where to Get Help**
 
-- **GitHub Discussions**: [Discussions tab](https://github.com/username/git-security-audit/discussions)
+- **GitHub Discussions**: [Discussions tab](https://github.com/Franklin-Andres-Rodriguez/git-security-audit/discussions)
 - **Issues**: For bugs and feature requests
 - **Email**: security@git-security-audit.com (for security issues)
 - **Discord**: [Development Channel](https://discord.gg/gitsecurityaudit) (if available)
@@ -336,7 +336,7 @@ We welcome contributions to make the tool more accessible:
 
 All contributors are recognized in:
 - [README.md contributors section](README.md#contributors)
-- [Annual contributor report](https://github.com/username/git-security-audit/releases)
+- [Annual contributor report](https://github.com/Franklin-Andres-Rodriguez/git-security-audit/releases)
 - Special mentions in release notes
 
 ### Contribution Rewards
@@ -388,7 +388,7 @@ By contributing to Git Security Audit Framework, you agree that your contributio
 
 Every contribution, no matter how small, makes this project better for everyone. Whether you're fixing a typo, adding a feature, or helping other users, you're helping to make the developer ecosystem more secure.
 
-**Ready to contribute?** Start by reading our issues labeled [`good first issue`](https://github.com/username/git-security-audit/labels/good%20first%20issue)!
+**Ready to contribute?** Start by reading our issues labeled [`good first issue`](https://github.com/Franklin-Andres-Rodriguez/git-security-audit/labels/good%20first%20issue)!
 
 ---
 

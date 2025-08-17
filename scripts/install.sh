@@ -2,14 +2,14 @@
 
 # Git Security Audit Framework - Installation Script
 # Professional one-line installation for all platforms
-# Usage: curl -fsSL https://raw.githubusercontent.com/username/git-security-audit/main/scripts/install.sh | bash
+# Usage: curl -fsSL https://raw.githubusercontent.com/Franklin-Andres-Rodriguez/git-security-audit/main/scripts/install.sh | bash
 
 set -euo pipefail
 
 # Script metadata
 SCRIPT_NAME="Git Security Audit Framework Installer"
 VERSION="2.0.0"
-REPO_OWNER="username"  # Replace with actual GitHub username
+REPO_OWNER="Franklin-Andres-Rodriguez"  # Repository owner
 REPO_NAME="git-security-audit"
 INSTALL_DIR="${INSTALL_DIR:-/usr/local/bin}"
 TEMP_DIR="/tmp/git-security-audit-install"

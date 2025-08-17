@@ -37,8 +37,8 @@ For **critical security vulnerabilities** that could impact user data or reposit
 **DO NOT** create a public issue. Instead:
 
 1. **Email us privately**: [security@git-security-audit.com](mailto:security@git-security-audit.com)
-2. **Use our security form**: [GitHub Security Advisory](https://github.com/username/git-security-audit/security/advisories/new)
-3. **PGP encryption** (optional): Use our [public key](https://keybase.io/yourusername) for sensitive details
+2. **Use our security form**: [GitHub Security Advisory](https://github.com/Franklin-Andres-Rodriguez/git-security-audit/security/advisories/new)
+3. **PGP encryption** (optional): Use our [public key](https://keybase.io/Franklin-Andres-Rodriguez) for sensitive details
 
 ### 📋 What to Include
 
@@ -172,8 +172,8 @@ If you suspect a security incident related to our tool:
 
 ### Official Security Channels
 - 📧 **Email**: [security@git-security-audit.com](mailto:security@git-security-audit.com)
-- 🔐 **GitHub Security**: [Security tab](https://github.com/username/git-security-audit/security)
-- 📢 **Security Advisories**: [GitHub Advisories](https://github.com/username/git-security-audit/security/advisories)
+- 🔐 **GitHub Security**: [Security tab](https://github.com/Franklin-Andres-Rodriguez/git-security-audit/security)
+- 📢 **Security Advisories**: [GitHub Advisories](https://github.com/Franklin-Andres-Rodriguez/git-security-audit/security/advisories)
 - 🐦 **Security Updates**: [@GitSecurityAudit](https://twitter.com/gitsecurityaudit)
 
 ### Educational Resources
@@ -200,7 +200,7 @@ We thank the following security researchers and contributors:
 ## 📞 Contact Information
 
 **Primary Contact**: security@git-security-audit.com  
-**GPG Key ID**: `0x1234567890ABCDEF` ([Download](https://keybase.io/yourusername))  
+**GPG Key ID**: `0x1234567890ABCDEF` ([Download](https://keybase.io/Franklin-Andres-Rodriguez))  
 **Response Time**: We aim to respond to security reports within 24 hours
 
 **Emergency Contact**: For critical vulnerabilities affecting production systems, please include "URGENT SECURITY" in your email subject.
