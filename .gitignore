@@ -26,3 +26,7 @@ temp_*
 # OS generated files
 .DS_Store
 Thumbs.db
+
+# Security scan outputs (never commit scan results)
+security-report.*
+audit-results.*
