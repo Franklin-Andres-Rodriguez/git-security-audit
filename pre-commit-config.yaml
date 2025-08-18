@@ -1,0 +1,205 @@
+# .pre-commit-config.yaml
+# Expert GitHub Security Audit Framework Pre-commit Configuration
+# Professional-grade validation pipeline for 2024-2025
+
+default_install_hook_types: [pre-commit, pre-push, commit-msg]
+default_stages: [pre-commit]
+
+repos:
+  # Core Git hygiene (2024 updated versions)
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.6.0  # Latest 2024
+    hooks:
+      - id: check-executables-have-shebangs
+      - id: check-shebang-scripts-are-executable
+      - id: check-merge-conflict
+      - id: check-added-large-files
+        args: ['--maxkb=10240']  # 10MB limit for security tools
+      - id: detect-private-key
+        exclude: tests/fixtures/
+      - id: forbid-new-submodules
+      - id: trailing-whitespace
+        exclude: '\.md$'
+      - id: end-of-file-fixer
+      - id: check-case-conflict
+      - id: check-symlinks
+
+  # Shell script validation - Expert level
+  - repo: https://github.com/shellcheck-py/shellcheck-py
+    rev: v0.10.0.1  # 2024 release with enhanced security checks
+    hooks:
+      - id: shellcheck
+        args: [
+          '--severity=warning',
+          '--external-sources',
+          '--format=gcc',
+          '--enable=all',
+          '--exclude=SC2034'  # Exclude unused variable warnings for config files
+        ]
+        exclude: ^tests/fixtures/
+
+  # Secret detection - Multi-layer approach (Expert 2024 practice)
+  - repo: https://github.com/Yelp/detect-secrets
+    rev: v1.5.0
+    hooks:
+      - id: detect-secrets
+        args: [
+          '--baseline', '.secrets.baseline',
+          '--force-use-all-plugins',
+          '--exclude-files', 'tests/fixtures/.*',
+          '--exclude-lines', 'git-security-audit:allow'
+        ]
+
+  # Commit message validation - Industry standard
+  - repo: https://github.com/compilerla/conventional-pre-commit
+    rev: v3.6.0
+    hooks:
+      - id: conventional-pre-commit
+        stages: [commit-msg]
+        args: [
+          '--strict',
+          '--types', 'feat,fix,docs,style,refactor,test,chore,ci,perf,build'
+        ]
+
+  # Expert custom hooks for our security audit framework
+  - repo: local
+    hooks:
+      # Syntax validation
+      - id: security-audit-syntax
+        name: 🔍 Security Audit Script Syntax Check
+        entry: bash -n
+        language: system
+        files: ^src/git-security-audit.*\.sh$
+        
+      # Functional validation
+      - id: security-audit-functionality
+        name: 🧪 Security Audit Framework Functionality Test
+        entry: |
+          bash -c '
+          echo "🧪 Testing Security Audit Framework functionality..."
+          
+          # Version check
+          if ! ./src/git-security-audit-emergency.sh --version >/dev/null 2>&1; then
+            echo "❌ Script version check failed"
+            exit 1
+          fi
+          
+          # Help check
+          if ! ./src/git-security-audit-emergency.sh --help >/dev/null 2>&1; then
+            echo "❌ Script help function failed"
+            exit 1
+          fi
+          
+          # Quick functionality test
+          echo "AWS_ACCESS_KEY_ID=AKIA1234567890EXAMPLE" > temp-test-secret.env
+          if ./src/git-security-audit-emergency.sh --type quick . >/dev/null 2>&1; then
+            echo "✅ Security framework functionality verified"
+            rm -f temp-test-secret.env
+            rm -rf security-audit/ 2>/dev/null
+          else
+            echo "❌ Security framework functionality test failed"
+            rm -f temp-test-secret.env
+            exit 1
+          fi
+          '
+        language: system
+        files: ^src/git-security-audit.*\.sh$
+        pass_filenames: false
+        
+      # Pattern validation
+      - id: security-patterns-validation
+        name: 🔐 Security Patterns Validation
+        entry: |
+          bash -c '
+          echo "🔐 Validating security patterns..."
+          
+          # Check if patterns are properly formatted
+          if grep -q "declare -A SECRET_PATTERNS" src/git-security-audit-emergency.sh; then
+            # Extract and validate regex patterns
+            PATTERN_COUNT=$(grep -c "\\[\".*\"\\]=" src/git-security-audit-emergency.sh || echo "0")
+            if [ "$PATTERN_COUNT" -gt 15 ]; then
+              echo "✅ Security patterns validated ($PATTERN_COUNT patterns found)"
+            else
+              echo "❌ Insufficient security patterns ($PATTERN_COUNT found, need >15)"
+              exit 1
+            fi
+          else
+            echo "❌ Security patterns array not found"
+            exit 1
+          fi
+          '
+        language: system
+        files: ^src/git-security-audit.*\.sh$
+        pass_filenames: false
+        
+      # Prevent accidental secret commits
+      - id: prevent-real-secrets
+        name: 🚨 Prevent Real Secrets in Repository
+        entry: |
+          bash -c '
+          DANGER_PATTERNS=(
+            "AKIA[0-9A-Z]{16}"           # Real AWS keys
+            "ghp_[A-Za-z0-9]{36}"        # Real GitHub tokens
+            "sk-[A-Za-z0-9]{48}"         # OpenAI API keys
+          )
+          
+          for pattern in "${DANGER_PATTERNS[@]}"; do
+            if git diff --cached | grep -qE "$pattern"; then
+              echo "🚨 BLOCKED: Real secret pattern detected in staged changes"
+              echo "   Pattern: $pattern"
+              echo "   This appears to be a real credential, not test data"
+              echo "   Use fake/mock credentials for testing instead"
+              exit 1
+            fi
+          done
+          
+          echo "✅ No real secrets detected in staged changes"
+          '
+        language: system
+        stages: [pre-commit]
+        always_run: true
+
+  # 2024 Feature: GitHub Copilot integration (if available)
+  - repo: local
+    hooks:
+      - id: copilot-security-hints
+        name: 🤖 AI Security Review Hints
+        entry: |
+          bash -c '
+          if command -v gh >/dev/null && gh extension list | grep -q copilot; then
+            CHANGED_FILES=$(git diff --cached --name-only | grep -E "\.(sh|bash|env|config)$" | head -3)
+            if [ -n "$CHANGED_FILES" ]; then
+              echo "🤖 AI Security Review available for:"
+              echo "$CHANGED_FILES" | sed "s/^/   - /"
+              echo ""
+              echo "💡 Run: gh copilot suggest \"Review these files for security issues\""
+              echo "   or: gh copilot explain \"potential security risks in shell scripts\""
+            fi
+          fi
+          '
+        language: system
+        stages: [pre-commit]
+        always_run: true
+        
+      # Performance monitoring for large repos
+      - id: performance-check
+        name: ⚡ Performance Impact Check
+        entry: |
+          bash -c '
+          REPO_SIZE=$(du -sh . | cut -f1)
+          FILE_COUNT=$(find . -type f | wc -l)
+          
+          echo "📊 Repository metrics:"
+          echo "   Size: $REPO_SIZE"
+          echo "   Files: $FILE_COUNT"
+          
+          # Warn about potential performance issues
+          if [ "$FILE_COUNT" -gt 10000 ]; then
+            echo "⚠️  Large repository detected - consider optimizing scan patterns"
+          fi
+          
+          echo "✅ Performance check complete"
+          '
+        language: system
+        stages: [pre-push]
+        always_run: true

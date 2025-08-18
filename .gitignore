@@ -1,32 +1,36 @@
-# Security audit results (nunca commitear scan data)
+# Security scan outputs
 security-audit/
-audit-results/
-scan-*/
+*.security-report.*
 
-# Test repositories and data
-test-*/
-*-test/
-test.json
-quick-audit.json
-
-# Temporary files and backups
-*.backup
-*.before-*
+# Temporary files
 *.tmp
-temp_*
-
-# Build artifacts and downloads
-*.tar.gz
-*.zip
-
-# Environment files with potential secrets
-.env
-.env.local
-
-# OS generated files
+*.temp
+*~
 .DS_Store
 Thumbs.db
 
-# Security scan outputs (never commit scan results)
-security-report.*
-audit-results.*
+# Debug and diagnostic files
+debug_*.sh
+diagnostic*.sh
+diagnostic*.txt
+*forensic*
+
+# Backup files
+*.backup*
+*.bak
+*.orig
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Test files with real secrets
+test-secrets.*
+real-secrets.*
